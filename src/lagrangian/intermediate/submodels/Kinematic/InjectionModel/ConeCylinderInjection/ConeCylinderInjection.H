@@ -52,10 +52,10 @@ namespace Foam
                        Class ConeCylinderInjection Declaration
 \*---------------------------------------------------------------------------*/
 
+// ConeCylinderInjection model is in same inheritance level as ConeInjection
 template<class CloudType>
 class ConeCylinderInjection
 :
-    // This in the same inheritance level as 
     public InjectionModel<CloudType>
 {
 public:

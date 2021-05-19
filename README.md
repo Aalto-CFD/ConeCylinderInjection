@@ -1,6 +1,8 @@
 # conecylinj-model
 
-- Inherits standard coneInjection spray kinematic submodel to extend the 2D disc injection into 3D cylinder "volumetric" injection.
+- ConeCylinderInjection: spray kinematic submodel that extends the 2D disc injection into 3D cylinderical "volumetric" injection.
+
+- Derived from InjectionModel in stock, and inheritance level of "ConeCylinderInjection" model is the same as "ConeInjectionModel".
 
 - coneCylinderInjection model allows only method "cylinder", to avoid code duplication for "point" or "disc" which are already implemented in coneInjection model.
 
