@@ -6,7 +6,9 @@
      \\/     M anipulation  |
 -------------------------------------------------------------------------------
 License
-    This file is part of OpenFOAM.
+    This file is part of ConeCylinderInjection submodel, derived from OpenFOAM.
+
+    https://github.com/Aalto-CFD/ConeCylinderInjection
 
     OpenFOAM is free software: you can redistribute it and/or modify it
     under the terms of the GNU General Public License as published by
@@ -25,14 +27,89 @@ Class
     Foam::ConeCylinderInjection
 
 Description
+    This injection submodel extends standard ConeInjection model from OpenFOAM
+    into 3D. This is achieved by extending the "disc" injection model into 
+    "cylinder" injection model. The parameters for position, direction, cone
+    angles, and disc inner and outer diameters are all preserved for the new 
+    model, while the parameter "hCylinder" is required to set cylinder height.
+    Therefore, instead of injecting parcels over a disc (2D area), they are
+    introduced randomly within finite volume cylinder (3D).
 
 Usage
+    \table
+    Property        | Description                    | Required | Default
+    position        | The injection position         | yes      |
+    direction       | The injection direction        | yes      |
+    thetaInner      | The inner cone angle           | yes      |
+    thetaOuter      | The outer cone angle           | yes      |
+    injectionMethod | Inject into a cylinder         | yes      |
+    dInner          | The inner cylinder diameter    | yes      |
+    dInner          | The outer cylinder diameter    | yes      |
+    hCylinder       | The cylinder height            | yes      |
+    offsetCylinder  | Offset cylinder from injector position | yes |
+    flowType        | Inject with constantVelocity, pressureDrivenVelocity \\
+                                 or flowRateAndDischarge | no | constantVelocity
+    Umag            | The injection velocity         | if constantVelocity |
+    Pinj            | The injection pressure         |\\
+                                                     if pressureDrivenVelocity |
+    Cd              | The discharge coefficient      | if flowRateAndDischarge |
+    \endtable
 
     Example specification:
 
+    \verbatim
+    injectionModels
+    {
+        model1
+        {
+            type            coneCylinderInjection;
+            // Times
+            SOI             0;
+            duration        1;
+            // Quantities
+            massTotal       0; // <-- not used with these settings
+            parcelBasisType fixed;
+            parcelsPerSecond 1000000;
+            flowRateProfile constant 1;
+            nParticle       1;
+            // Sizes
+            sizeDistribution
+            {
+                type        fixedValue;
+                fixedValueDistribution
+                {
+                    value   0.0025;
+                }
+            }
+            // Geometry
+            position        (-0.15 -0.1 0);
+            direction       (1 0 0);
+            thetaInner      0;
+            thetaOuter      45;
+            injectionMethod cylinder;
+            dInner          0;
+            dOuter          0.05;
+            hCylinder       0.05;
+            offsetCylinder  0.0;
+
+            // Velocity
+            // - Inject with constant velocity
+            flowType        constantVelocity;
+            Umag            1;
+            //// - Or, inject with flow rate and discharge coefficient
+            ////   This also requires massTotal, dInner and dOuter
+            //flowType        flowRateAndDischarge;
+            //Cd              0.9;
+            //// - Or, inject at a pressure
+            //flowType        pressureDrivenVelocity;
+            //Pinj            10e5;
+        }
+    }
+    \endverbatim
 
 SourceFiles
     ConeCylinderInjection.C
+
 
 \*---------------------------------------------------------------------------*/
 
@@ -78,7 +155,7 @@ private:
 
     // Private Data
 
-        //- Point/disc injection method
+        //- Cylindrical injection method
         injectionMethod injectionMethod_;
 
         //- Flow type
@@ -123,10 +200,10 @@ private:
 
         // Disc geometry
 
-            //- The inner disc diameter [m]
+            //- The inner cylinder diameter [m]
             scalar dInner_;
 
-            //- The outer disc diameter [m]
+            //- The outer cylinder diameter [m]
             scalar dOuter_;
 
         //- Cylinder height [m]

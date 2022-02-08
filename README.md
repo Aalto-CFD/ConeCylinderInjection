@@ -8,3 +8,7 @@
 
 - The runtime warning that we previously encountered for undefined symbols was actually due to some missing library ("liblagrangianSpray" in particular) that needs to be linked. Therefore, nothing to do with duplicate implementation of "point" and "disc" related member functions.
 
+
+
+# References
+
