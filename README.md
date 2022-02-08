@@ -26,7 +26,7 @@ introduced randomly within a 3D finite volume cylinder.
 
 
 An artistic illustration of the cylindrical injection model is depicted in the
-following figure. Further details can found in [[1]](#1)
+following figure. Further details are found in [[1]](#1)
 
 <p align="center">
 <img src=".readme/spray.png" alt>
