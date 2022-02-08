@@ -51,7 +51,6 @@ void Foam::ConeCylinderInjection<CloudType>::setInjectionMethod()
         this->coeffDict().lookup("dOuter") >> dOuter_;
 
         this->coeffDict().lookup("hCylinder") >> hCylinder_;
-        // this->coeffDict().lookupOrDefault("offsetCylinder", 0.0) >> offsetCylinder_;
         this->coeffDict().lookup("offsetCylinder") >> offsetCylinder_;
     }
     else
@@ -321,7 +320,7 @@ void Foam::ConeCylinderInjection<CloudType>::setPositionAndCell
             scalar frac_y = (2.0*rndGen.globalScalar01())-1;
             // Ensure the triangle formed by fracs x,y and z is not obtuse
             while (sqr(frac_x) + sqr(frac_y) > 1.0)
-            { // DO NOT UNDERSTAND WHY!
+            {
                 frac_y = (2.0*rndGen.globalScalar01())-1;
             }
             const scalar frac_z = rndGen.globalScalar01();
@@ -363,8 +362,6 @@ void Foam::ConeCylinderInjection<CloudType>::setProperties
     typename CloudType::parcelType& parcel
 )
 {
-    // Random& rndGen = this->owner().rndGen();
-
     const scalar t = time - this->SOI_;
 
     // Get the angle from the axis and the vector perpendicular from the axis.
@@ -376,7 +373,7 @@ void Foam::ConeCylinderInjection<CloudType>::setProperties
     vector tanVec = vector::max;
     switch (injectionMethod_)
     {
-        case imCylinder: // NOT SURE IF WE COMPUTE ANGLE THIS WAY HERE TOO
+        case imCylinder:
         {
             const scalar r = mag(parcel.position() - position_.value(t));
             const scalar frac = (2*r - dInner_)/(dOuter_ - dInner_);
