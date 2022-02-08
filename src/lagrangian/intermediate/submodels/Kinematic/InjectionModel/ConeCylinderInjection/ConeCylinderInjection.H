@@ -31,7 +31,8 @@ Description
     into 3D. This is achieved by extending the "disc" injection model into 
     "cylinder" injection model. The parameters for position, direction, cone
     angles, and disc inner and outer diameters are all preserved for the new 
-    model, while the parameter "hCylinder" is required to set cylinder height.
+    model, while parameters "hCylinder" and "offsetCylinder" are required
+    to set cylinder height and offset from injector position.
     Therefore, instead of injecting parcels over a disc (2D area), they are
     introduced randomly within finite volume cylinder (3D).
 
