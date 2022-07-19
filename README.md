@@ -14,7 +14,9 @@
 Cone cylindrical injection submodel that extends the 2D `disc` coneInjection
 model, implemented in `lagrangianIntermediate` library, into 3D. This allows
 better handling of the Lagrangian data especially when lots of parcels are
-injected on the 2D disc that occasional solver crashes were reported.
+injected on the 2D disc that occasional solver crashes were reported. This
+is a re-implementation of an earlier in-house version originally developed by
+Dr. Armin Wehrfritz and Prof. Ville Vuorinen.
 
 In the new model, computational parcels are randomly injected from cylinder
 of fixed height. The parameters for position, direction, cone
@@ -87,9 +89,9 @@ libs
 
 ## Contact
 
-- Mahmoud Gadalla (mahmoud.gadalla@aalto.fi)
-- Bulut Tekgül (buluttekgul@gmail.com)
-- Heikki Kahila (heikki.kahila@wartsila.com)
+- Mahmoud Gadalla (<a href='mailto&#58;&#37;&#54;7a%&#54;4&#97;&#108;&#108;a&#46;&#109;%61h&#37;40&#37;6&#55;mai&#37;6C%2Ecom'>&#103;ad&#97;ll&#97;&#46;mah&#64;gm&#97;il&#46;&#99;om</a>)
+- Bulut Tekgül (<a href='mailto&#58;bul%75ttek%67&#37;75l&#64;&#103;m&#97;il&#46;%63&#111;&#37;6D'>&#98;u&#108;ut&#116;ekgu&#108;&#64;&#103;mail&#46;c&#111;m</a>)
+- Heikki Kahila (<a href='m&#97;ilto&#58;&#104;eik&#107;%69&#37;2Ek&#97;hila&#64;&#37;67m&#97;&#105;%6C&#46;&#99;%6Fm'>&#104;eikki&#46;ka&#104;ila&#64;gmail&#46;co&#109;</a>)
 
 ## Citing
 
