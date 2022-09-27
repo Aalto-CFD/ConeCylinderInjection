@@ -1,5 +1,6 @@
 # ConeCylinderInjection: Extend Lagrangian parcels injection into 3D.
-![OpenFOAM 8](https://img.shields.io/badge/OpenFOAM-8-brightgreen)
+![OpenFOAM dev](https://img.shields.io/badge/OpenFOAM-dev-brightgreen)  |  Tested compatability for dev commit tag [20220907](https://github.com/OpenFOAM/OpenFOAM-dev/commit/6d563efec1b6f3a8aed410998d05e2567335600b).
+
 
 ## Table of contents
 * [Description](#description)
@@ -38,9 +39,12 @@ following figure. Further details can found in [[1]](#1)
     setting a solid cylinder geometry (zero inner diameter). Source: https://doi.org/10.3390/en13133360</em>
 </p>
 
-The class `ConeCylinderInjection` implementing the present model is in the same
-level as `ConeInjection` class, i.e. they both inherit from templated 
-`InjectionModel`.
+The present model, of type name `coneCylinderInjection`, allows utilization of
+the built-in `point` and `disc` injection methods, besides the new `cylinder`
+injection method. Furthermore, the class `ConeCylinderInjection` implementing
+the present model is in the same level as `ConeInjection` class, i.e. they
+both inherit from templated `InjectionModel`. Currently, the model supports
+dynamic compilation of `sprayCloud` parcel type.
 
 
 ## How to use
@@ -58,7 +62,7 @@ libs
 ```
 
 * Choose cylinder injection model from the corresponding subdictionary in
-  `constant/sprayCloudProperties` as in the following example.
+  `constant/cloudProperties` as in the following example.
 
 ```
     injectionModels

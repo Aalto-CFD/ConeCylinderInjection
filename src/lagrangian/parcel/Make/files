@@ -1,0 +1,7 @@
+PARCELS=parcels
+DERIVEDPARCELS=$(PARCELS)/derived
+
+# sub-models
+$(DERIVEDPARCELS)/sprayParcel/makeSprayParcelConeCylinderInjection.C
+
+LIB = $(FOAM_USER_LIBBIN)/libconeCylinderInjection

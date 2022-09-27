@@ -1,9 +1,18 @@
 #!/bin/sh
 cd ${0%/*} || exit 1    # Run from this directory
 
-cd src/lagrangian
+# Parse arguments for library compilation
+. wmake/scripts/AllwmakeParseArguments
 
-wclean all
+# Perform various checks
+wmakeCheckPwd "$WM_PROJECT_DIR" || {
+    echo "Allwmake error: Current directory is not \$WM_PROJECT_DIR"
+    echo "    The environment variables are inconsistent with the installation."
+    echo "    Check the OpenFOAM entries in your dot-files and source them."
+    exit 1
+}
 
-wmake libso
+# Compile OpenFOAM libraries and applications
+src/lagrangian/Allwmake $targetType $*
+
 #------------------------------------------------------------------------------

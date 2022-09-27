@@ -1,8 +1,8 @@
 /*---------------------------------------------------------------------------*\
   =========                 |
   \\      /  F ield         | OpenFOAM: The Open Source CFD Toolbox
-   \\    /   O peration     |
-    \\  /    A nd           | Copyright (C) 2013 OpenFOAM Foundation
+   \\    /   O peration     | Website:  https://openfoam.org
+    \\  /    A nd           | Copyright (C) 2011-2020 OpenFOAM Foundation
      \\/     M anipulation  |
 -------------------------------------------------------------------------------
 License
@@ -19,20 +19,58 @@ License
     for more details.
 
     You should have received a copy of the GNU General Public License
-    along with OpenFOAM. If not, see <http://www.gnu.org/licenses/>.
+    along with OpenFOAM.  If not, see <http://www.gnu.org/licenses/>.
+
+Class
+    Foam::sprayParcel
+
+Description
+    Definition of spray parcel
+
+SourceFiles
+    sprayParcel.C
+    sprayParcelIO.C
 
 \*---------------------------------------------------------------------------*/
 
-#include "basicSprayCloud.H"
-#include "ConeCylinderInjection.H"
+#ifndef sprayParcel_H
+#define sprayParcel_H
+
+#include "contiguous.H"
+#include "particle.H"
+#include "MomentumParcel.H"
+#include "ThermoParcel.H"
+#include "ReactingParcel.H"
+#include "SprayParcel.H"
 
 // * * * * * * * * * * * * * * * * * * * * * * * * * * * * * * * * * * * * * //
 
 namespace Foam
 {
-    makeInjectionModelType(ConeCylinderInjection, basicSprayCloud);
-};
+    typedef SprayParcel
+    <
+        ReactingParcel
+        <
+            ThermoParcel
+            <
+                MomentumParcel
+                <
+                    particle
+                >
+            >
+        >
+    > sprayParcel;
 
+    template<>
+    inline bool contiguous<sprayParcel>()
+    {
+        return false;
+    }
+}
+
+
+// * * * * * * * * * * * * * * * * * * * * * * * * * * * * * * * * * * * * * //
+
+#endif
 
 // ************************************************************************* //
-
