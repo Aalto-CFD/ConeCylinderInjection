@@ -2,7 +2,7 @@
   =========                 |
   \\      /  F ield         | OpenFOAM: The Open Source CFD Toolbox
    \\    /   O peration     | Website:  https://openfoam.org
-    \\  /    A nd           | Copyright (C) 2011-2019 OpenFOAM Foundation
+    \\  /    A nd           | Copyright (C) 2011-2022 OpenFOAM Foundation
      \\/     M anipulation  |
 -------------------------------------------------------------------------------
 License
@@ -43,20 +43,35 @@ void Foam::ConeCylinderInjection<CloudType>::setInjectionMethod()
             word::null
         );
 
-    if (injectionMethod == "cylinder")
+    if (injectionMethod == "point" || injectionMethod == word::null)
+    {
+        injectionMethod_ = imPoint;
+
+        topoChange();
+    }
+    else if (injectionMethod == "disc")
+    {
+        injectionMethod_ = imDisc;
+
+        this->coeffDict().lookup("dInner") >> dInner_;
+        this->coeffDict().lookup("dOuter") >> dOuter_;
+    }
+    else if (injectionMethod == "cylinder")
     {
         injectionMethod_ = imCylinder;
 
         this->coeffDict().lookup("dInner") >> dInner_;
         this->coeffDict().lookup("dOuter") >> dOuter_;
 
+        this->coeffDict().lookup("dInnerCylinder") >> dInnerCylinder_;
+        this->coeffDict().lookup("dOuterCylinder") >> dOuterCylinder_;
         this->coeffDict().lookup("hCylinder") >> hCylinder_;
         this->coeffDict().lookup("offsetCylinder") >> offsetCylinder_;
     }
     else
     {
         FatalErrorInFunction
-            << "injectionMethod must be 'cylinder'"
+            << "injectionMethod must be 'point', 'disc' or 'cylinder'"
             << exit(FatalError);
     }
 }
@@ -96,7 +111,7 @@ void Foam::ConeCylinderInjection<CloudType>::setFlowType()
     else
     {
         FatalErrorInFunction
-            << "flowType must be either 'constantVelocity', "
+            << "flowType must be 'constantVelocity', "
             << "'pressureDrivenVelocity' or 'flowRateAndDischarge'"
             << exit(FatalError);
     }
@@ -114,7 +129,7 @@ Foam::ConeCylinderInjection<CloudType>::ConeCylinderInjection
 )
 :
     InjectionModel<CloudType>(dict, owner, modelName, typeName),
-    injectionMethod_(imCylinder),
+    injectionMethod_(imPoint),
     flowType_(ftConstantVelocity),
     position_
     (
@@ -179,10 +194,10 @@ Foam::ConeCylinderInjection<CloudType>::ConeCylinderInjection
     ),
     dInner_(vGreat),
     dOuter_(vGreat),
-
+    dInnerCylinder_(vGreat),
+    dOuterCylinder_(vGreat),
     hCylinder_(vGreat),
     offsetCylinder_(vGreat),
-
     Umag_(owner.db().time(), "Umag"),
     Cd_(owner.db().time(), "Cd"),
     Pinj_(owner.db().time(), "Pinj")
@@ -196,7 +211,7 @@ Foam::ConeCylinderInjection<CloudType>::ConeCylinderInjection
     // Set total volume to inject
     this->volumeTotal_ = flowRateProfile_.integrate(0, duration_);
 
-    updateMesh();
+    topoChange();
 }
 
 
@@ -223,10 +238,8 @@ Foam::ConeCylinderInjection<CloudType>::ConeCylinderInjection
     sizeDistribution_(im.sizeDistribution_().clone().ptr()),
     dInner_(im.dInner_),
     dOuter_(im.dOuter_),
-
-    hCylinder_(im.hCylinder_),
-    offsetCylinder_(im.offsetCylinder_),
-
+    dInnerCylinder_(im.dInnerCylinder_),
+    dOuterCylinder_(im.dOuterCylinder_),
     Umag_(im.Umag_),
     Cd_(im.Cd_),
     Pinj_(im.Pinj_)
@@ -243,8 +256,19 @@ Foam::ConeCylinderInjection<CloudType>::~ConeCylinderInjection()
 // * * * * * * * * * * * * * * * Member Functions  * * * * * * * * * * * * * //
 
 template<class CloudType>
-void Foam::ConeCylinderInjection<CloudType>::updateMesh()
+void Foam::ConeCylinderInjection<CloudType>::topoChange()
 {
+    if (injectionMethod_ == imPoint && positionIsConstant_)
+    {
+        vector position = position_.value(0);
+        this->findCellAtPosition
+        (
+            injectorCell_,
+            injectorTetFace_,
+            injectorTetPt_,
+            position
+        );
+    }
 }
 
 
@@ -313,18 +337,58 @@ void Foam::ConeCylinderInjection<CloudType>::setPositionAndCell
 
     switch (injectionMethod_)
     {
+        case imPoint:
+        {
+            position = position_.value(t);
+            if (positionIsConstant_)
+            {
+                cellOwner = injectorCell_;
+                tetFacei = injectorTetFace_;
+                tetPti = injectorTetPt_;
+            }
+            else
+            {
+                this->findCellAtPosition
+                (
+                    cellOwner,
+                    tetFacei,
+                    tetPti,
+                    position,
+                    false
+                );
+            }
+            break;
+        }
+        case imDisc:
+        {
+            const scalar beta = twoPi*rndGen.globalScalar01();
+            const scalar frac = rndGen.globalScalar01();
+            const vector n = normalised(direction_.value(t));
+            const vector t1 = normalised(perpendicular(n));
+            const vector t2 = normalised(n ^ t1);
+            const vector tanVec = t1*cos(beta) + t2*sin(beta);
+            const scalar d = sqrt((1 - frac)*sqr(dInner_) + frac*sqr(dOuter_));
+            position = position_.value(t) + d/2*tanVec;
+            this->findCellAtPosition
+            (
+                cellOwner,
+                tetFacei,
+                tetPti,
+                position,
+                false
+            );
+            break;
+        }
         case imCylinder:
         {
-
             const scalar frac_x = (2.0*rndGen.globalScalar01())-1;
             scalar frac_y = (2.0*rndGen.globalScalar01())-1;
-            // Ensure the triangle formed by fracs x,y and z is not obtuse
             while (sqr(frac_x) + sqr(frac_y) > 1.0)
             {
                 frac_y = (2.0*rndGen.globalScalar01())-1;
             }
             const scalar frac_z = rndGen.globalScalar01();
-            const scalar dr = 0.5*(dOuter_ - dInner_);
+            const scalar dr = 0.5*(dOuterCylinder_ - dInnerCylinder_);
             const vector n = normalised(direction_.value(t));
             const vector t1 = normalised(perpendicular(n));
             const vector t2 = normalised(n ^ t1);
@@ -362,6 +426,8 @@ void Foam::ConeCylinderInjection<CloudType>::setProperties
     typename CloudType::parcelType& parcel
 )
 {
+    Random& rndGen = this->owner().rndGen();
+
     const scalar t = time - this->SOI_;
 
     // Get the angle from the axis and the vector perpendicular from the axis.
@@ -373,10 +439,42 @@ void Foam::ConeCylinderInjection<CloudType>::setProperties
     vector tanVec = vector::max;
     switch (injectionMethod_)
     {
-        case imCylinder:
+        case imPoint:
+        {
+            const scalar beta = twoPi*rndGen.scalar01();
+            const scalar frac = rndGen.scalar01();
+            const vector n = normalised(direction_.value(t));
+            const vector t1 = normalised(perpendicular(n));
+            const vector t2 = normalised(n ^ t1);
+            tanVec = t1*cos(beta) + t2*sin(beta);
+            theta =
+                degToRad
+                (
+                    sqrt
+                    (
+                        (1 - frac)*sqr(thetaInner_.value(t))
+                        + frac*sqr(thetaOuter_.value(t))
+                    )
+                );
+            break;
+        }
+        case imDisc:
         {
             const scalar r = mag(parcel.position() - position_.value(t));
             const scalar frac = (2*r - dInner_)/(dOuter_ - dInner_);
+            tanVec = normalised(parcel.position() - position_.value(t));
+            theta =
+                degToRad
+                (
+                    (1 - frac)*thetaInner_.value(t)
+                    + frac*thetaOuter_.value(t)
+                );
+            break;
+        }
+        case imCylinder:
+        {
+            const scalar r = mag(parcel.position() - position_.value(t));
+            const scalar frac = (2*r - dInnerCylinder_)/(dOuterCylinder_ - dInnerCylinder_);
             tanVec = normalised(parcel.position() - position_.value(t));
             theta =
                 degToRad

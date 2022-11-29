@@ -2,13 +2,11 @@
   =========                 |
   \\      /  F ield         | OpenFOAM: The Open Source CFD Toolbox
    \\    /   O peration     | Website:  https://openfoam.org
-    \\  /    A nd           | Copyright (C) 2011-2019 OpenFOAM Foundation
+    \\  /    A nd           | Copyright (C) 2011-2022 OpenFOAM Foundation
      \\/     M anipulation  |
 -------------------------------------------------------------------------------
 License
-    This file is part of ConeCylinderInjection submodel, derived from OpenFOAM.
-
-    https://github.com/Aalto-CFD/ConeCylinderInjection
+    This file is part of OpenFOAM.
 
     OpenFOAM is free software: you can redistribute it and/or modify it
     under the terms of the GNU General Public License as published by
@@ -27,27 +25,48 @@ Class
     Foam::ConeCylinderInjection
 
 Description
-    This injection submodel extends standard ConeInjection model from OpenFOAM
-    into 3D. This is achieved by extending the "disc" injection model into 
-    "cylinder" injection model. The parameters for position, direction, cone
-    angles, and disc inner and outer diameters are all preserved for the new 
-    model, while parameters "hCylinder" and "offsetCylinder" are required
-    to set cylinder height and offset from injector position.
-    Therefore, instead of injecting parcels over a disc (2D area), they are
-    introduced randomly within finite volume cylinder (3D).
+    This injector injects particles in a number of cones. The user specifies a
+    position and a direction to inject at, and two angles to inject between.
+    Optionally, this injector can introduce particles over a disc, instead of
+    at a point, in which case inner and outer diameters of the disc are also
+    specified. Furthermore, particles can be introduced from a cylinder, the
+    case of which the cylinder height and offset are specified, in addition to
+    the disc parameters.
+
+    The velocity is specified either as constant, or it is calculated from an
+    injection pressure, or it is calculated from the injector mass flow rate
+    and a discharge coefficient; i.e.:
+
+    Constant velocity:
+    \f[
+    U = U_{constant}
+    \f]
+
+    Pressure driven velocity:
+    \f[
+    U = \sqrt{2(p_{injection} - p)/\rho}
+    \f]
+
+    Flow rate and discharge:
+    \f[
+    U = \dot{m}/(\rho A C_{discharge})
+    \f]
 
 Usage
     \table
-    Property        | Description                    | Required | Default
-    position        | The injection position         | yes      |
-    direction       | The injection direction        | yes      |
-    thetaInner      | The inner cone angle           | yes      |
-    thetaOuter      | The outer cone angle           | yes      |
-    injectionMethod | Inject into a cylinder         | yes      |
-    dInner          | The inner cylinder diameter    | yes      |
-    dInner          | The outer cylinder diameter    | yes      |
-    hCylinder       | The cylinder height            | yes      |
-    offsetCylinder  | Offset cylinder from injector position | yes |
+    Property        | Description                                      |\\
+                                                        Required | Default
+    position        | The injection position                           | yes      |
+    direction       | The injection direction                          | yes      |
+    thetaInner      | The inner cone angle                             | yes      |
+    thetaOuter      | The outer cone angle                             | yes      |
+    injectionMethod | Inject at a point, on a disc, or from a cylinder | no       | point
+    dInner          | The inner disc/cylinder diameter                 |\\
+                                               if disc or flowRateAndDischarge |
+    dInner          | The outer disc/cylinder diameter                 |\\
+                                               if disc or flowRateAndDischarge |
+    hCylinder       | The cylinder height                              | yes      |
+    offsetCylinder  | Offset cylinder from injector position           | yes      |
     flowType        | Inject with constantVelocity, pressureDrivenVelocity \\
                                  or flowRateAndDischarge | no | constantVelocity
     Umag            | The injection velocity         | if constantVelocity |
@@ -64,15 +83,18 @@ Usage
         model1
         {
             type            coneCylinderInjection;
+
             // Times
             SOI             0;
             duration        1;
+
             // Quantities
             massTotal       0; // <-- not used with these settings
             parcelBasisType fixed;
             parcelsPerSecond 1000000;
             flowRateProfile constant 1;
             nParticle       1;
+
             // Sizes
             sizeDistribution
             {
@@ -82,25 +104,39 @@ Usage
                     value   0.0025;
                 }
             }
+
             // Geometry
             position        (-0.15 -0.1 0);
             direction       (1 0 0);
             thetaInner      0;
             thetaOuter      45;
-            injectionMethod cylinder;
-            dInner          0;
-            dOuter          0.05;
-            hCylinder       0.05;
-            offsetCylinder  0.0;
+
+            // - Inject at a point
+            injectionMethod point;
+
+            //// - Or, inject over a disc:
+            //injectionMethod disc;
+            //dInner          0;
+            //dOuter          0.05;
+
+            //// - Or, inject from a cylinder:
+            //injectionMethod cylinder;
+            //dInner          0;
+            //dOuter          0.05;
+            //hCylinder       0.05;
+            //offsetCylinder  0.0;
 
             // Velocity
+
             // - Inject with constant velocity
             flowType        constantVelocity;
             Umag            1;
+
             //// - Or, inject with flow rate and discharge coefficient
             ////   This also requires massTotal, dInner and dOuter
             //flowType        flowRateAndDischarge;
             //Cd              0.9;
+
             //// - Or, inject at a pressure
             //flowType        pressureDrivenVelocity;
             //Pinj            10e5;
@@ -110,7 +146,6 @@ Usage
 
 SourceFiles
     ConeCylinderInjection.C
-
 
 \*---------------------------------------------------------------------------*/
 
@@ -127,10 +162,9 @@ namespace Foam
 {
 
 /*---------------------------------------------------------------------------*\
-                       Class ConeCylinderInjection Declaration
+                        Class ConeCylinderInjection Declaration
 \*---------------------------------------------------------------------------*/
 
-// ConeCylinderInjection model is in same inheritance level as ConeInjection
 template<class CloudType>
 class ConeCylinderInjection
 :
@@ -141,6 +175,8 @@ public:
     //- Injection method enumeration
     enum injectionMethod
     {
+        imPoint,
+        imDisc,
         imCylinder
     };
 
@@ -152,11 +188,12 @@ public:
         ftFlowRateAndDischarge
     };
 
+
 private:
 
     // Private Data
 
-        //- Cylindrical injection method
+        //- Point/disc/cylinder injection method
         injectionMethod injectionMethod_;
 
         //- Flow type
@@ -201,11 +238,18 @@ private:
 
         // Disc geometry
 
-            //- The inner cylinder diameter [m]
+            //- The inner disc/nozzle diameter [m]
             scalar dInner_;
 
-            //- The outer cylinder diameter [m]
+            //- The outer disc/nozzle diameter [m]
             scalar dOuter_;
+
+
+        //- Cylinder inner diameter [m]
+            scalar dInnerCylinder_;
+
+        //- Cylinder outer diameter [m]
+            scalar dOuterCylinder_;
 
         //- Cylinder height [m]
             scalar hCylinder_;
@@ -271,7 +315,7 @@ public:
     // Member Functions
 
         //- Set injector locations when mesh is updated
-        virtual void updateMesh();
+        virtual void topoChange();
 
         //- Return the end-of-injection time
         scalar timeEnd() const;
