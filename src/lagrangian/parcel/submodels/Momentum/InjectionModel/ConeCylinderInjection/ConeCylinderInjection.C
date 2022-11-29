@@ -63,9 +63,10 @@ void Foam::ConeCylinderInjection<CloudType>::setInjectionMethod()
         this->coeffDict().lookup("dInner") >> dInner_;
         this->coeffDict().lookup("dOuter") >> dOuter_;
 
+        this->coeffDict().lookup("dInnerCylinder") >> dInnerCylinder_;
+        this->coeffDict().lookup("dOuterCylinder") >> dOuterCylinder_;
         this->coeffDict().lookup("hCylinder") >> hCylinder_;
         this->coeffDict().lookup("offsetCylinder") >> offsetCylinder_;
-
     }
     else
     {
@@ -193,6 +194,8 @@ Foam::ConeCylinderInjection<CloudType>::ConeCylinderInjection
     ),
     dInner_(vGreat),
     dOuter_(vGreat),
+    dInnerCylinder_(vGreat),
+    dOuterCylinder_(vGreat),
     hCylinder_(vGreat),
     offsetCylinder_(vGreat),
     Umag_(owner.db().time(), "Umag"),
@@ -235,6 +238,8 @@ Foam::ConeCylinderInjection<CloudType>::ConeCylinderInjection
     sizeDistribution_(im.sizeDistribution_().clone().ptr()),
     dInner_(im.dInner_),
     dOuter_(im.dOuter_),
+    dInnerCylinder_(im.dInnerCylinder_),
+    dOuterCylinder_(im.dOuterCylinder_),
     Umag_(im.Umag_),
     Cd_(im.Cd_),
     Pinj_(im.Pinj_)
@@ -383,7 +388,7 @@ void Foam::ConeCylinderInjection<CloudType>::setPositionAndCell
                 frac_y = (2.0*rndGen.globalScalar01())-1;
             }
             const scalar frac_z = rndGen.globalScalar01();
-            const scalar dr = 0.5*(dOuter_ - dInner_);
+            const scalar dr = 0.5*(dOuterCylinder_ - dInnerCylinder_);
             const vector n = normalised(direction_.value(t));
             const vector t1 = normalised(perpendicular(n));
             const vector t2 = normalised(n ^ t1);
@@ -421,6 +426,8 @@ void Foam::ConeCylinderInjection<CloudType>::setProperties
     typename CloudType::parcelType& parcel
 )
 {
+    const polyMesh& mesh = this->owner().mesh();
+
     Random& rndGen = this->owner().rndGen();
 
     const scalar t = time - this->SOI_;
@@ -454,11 +461,23 @@ void Foam::ConeCylinderInjection<CloudType>::setProperties
             break;
         }
         case imDisc:
+        {
+            const scalar r = mag(parcel.position(mesh) - position_.value(t));
+            const scalar frac = (2*r - dInner_)/(dOuter_ - dInner_);
+            tanVec = normalised(parcel.position(mesh) - position_.value(t));
+            theta =
+                degToRad
+                (
+                    (1 - frac)*thetaInner_.value(t)
+                    + frac*thetaOuter_.value(t)
+                );
+            break;
+        }
         case imCylinder:
         {
-            const scalar r = mag(parcel.position() - position_.value(t));
-            const scalar frac = (2*r - dInner_)/(dOuter_ - dInner_);
-            tanVec = normalised(parcel.position() - position_.value(t));
+            const scalar r = mag(parcel.position(mesh) - position_.value(t));
+            const scalar frac = (2*r - dInnerCylinder_)/(dOuterCylinder_ - dInnerCylinder_);
+            tanVec = normalised(parcel.position(mesh) - position_.value(t));
             theta =
                 degToRad
                 (

@@ -238,12 +238,18 @@ private:
 
         // Disc geometry
 
-            //- The inner disc diameter [m]
+            //- The inner disc/nozzle diameter [m]
             scalar dInner_;
 
-            //- The outer disc diameter [m]
+            //- The outer disc/nozzle diameter [m]
             scalar dOuter_;
 
+
+        //- Cylinder inner diameter [m]
+            scalar dInnerCylinder_;
+
+        //- Cylinder outer diameter [m]
+            scalar dOuterCylinder_;
 
         //- Cylinder height [m]
             scalar hCylinder_;
